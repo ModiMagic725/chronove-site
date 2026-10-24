@@ -1,0 +1,40 @@
+<!-- COLLECTIONS · porcelain gallery with filters, sort, quick compare -->
+<section class="phero">
+  <div class="media-fill grade" aria-hidden="true" data-render="scene:collections" data-parallax>{{scene:collections}}</div>
+  <div class="wrap phero__body">
+    <h1 data-split>Collections</h1>
+    <p class="lead" data-reveal>Nine watches in five families. Filter by family, sort by price, and compare up to four side by side.</p>
+  </div>
+</section>
+
+<section class="sec on-light" aria-labelledby="grid-h">
+  <div class="wrap">
+    <h2 id="grid-h" class="sr">All watches</h2>
+    <div class="head">
+      <div class="row" id="filters" role="group" aria-label="Filter by collection">{{filters}}</div>
+      <div style="min-width:200px"><label for="sort">Sort by</label>
+        <select id="sort"><option value="name">Name</option><option value="pa">Price, low to high</option><option value="pd">Price, high to low</option></select></div>
+    </div>
+    <p class="tag" id="result-count" role="status" aria-live="polite" style="margin-bottom:24px">9 watches</p>
+    <div class="grid-cards" id="cards" data-render="cards-all">{{cards-all}}</div>
+  </div>
+</section>
+
+<section class="sec" id="compare" aria-labelledby="cmp-h">
+  <div class="wrap">
+    <div class="head"><h2 id="cmp-h" data-split>Compare</h2>
+      <div class="row"><span class="tag" id="cmp-status" role="status" aria-live="polite">0 of 4 selected</span><button class="btn btn--sm" type="button" id="cmp-clear">Clear</button></div></div>
+    <div class="cmp-wrap" id="cmp-body"><p class="muted">Choose “Quick compare” on two or more watches to see them side by side.</p></div>
+  </div>
+</section>
+
+<section class="sec sec--tight on-light">
+  <div class="wrap split">
+    <div class="c-6"><h2 data-split>Choosing between them</h2></div>
+    <div class="c-6 prose" data-reveal>
+      <p>Start with the wrist, not the movement. A 38 mm Meridian wears close and quiet. A 42 mm Tidal 300 has presence and weighs more on the wrist even in titanium.</p>
+      <p>Then decide how much of the mechanism you want to see. Skeleton watches show everything; classic dials show the hour and trust the rest to the caseback.</p>
+      <p>Complications are about habit. If you like to set a date once a year, Equinox is for you. If you would rather never touch it, choose Perpetua.</p>
+    </div>
+  </div>
+</section>

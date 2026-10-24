@@ -1,0 +1,112 @@
+<!-- HOME · full-bleed hero, coverflow, pinned story, horizontal collections, counters, strap strip -->
+<section class="hero" data-hero aria-label="Introduction">
+  <div class="hero__media media-fill grade" aria-hidden="true" data-render="hero-media" data-parallax>{{hero-media}}</div>
+  <div class="wrap hero__body">
+    <div class="hero__grid">
+      <div>
+        <h1 data-split data-hero-title>The architecture of time</h1>
+        <p class="lead hero__sub" data-hero-sub>Nine watches built on one idea: every second has a structure, and the structure deserves to be seen.</p>
+        <div class="row hero__cta" data-hero-cta>
+          <a class="btn btn--solid magnetic" href="collections.html">View the collections</a>
+          <a class="btn magnetic" href="movement-engine.html">Enter the Movement Engine</a>
+        </div>
+      </div>
+      <div class="clock" data-hero-clock>
+        <p class="clock__t" id="clock" aria-hidden="true">00:00:00</p>
+        <p class="clock__z" id="clock-zone">Your local time</p>
+      </div>
+    </div>
+  </div>
+  <span class="scrollcue" aria-hidden="true"></span>
+</section>
+
+<section class="sec" aria-labelledby="feat-h">
+  <div class="wrap head">
+    <div>
+      <h2 id="feat-h" data-split>Nine watches, five families</h2>
+      <p class="lead" data-reveal style="margin-top:16px">From a 38 mm steel dress watch to a perpetual calendar. Drag, swipe or use the arrow keys.</p>
+    </div>
+    <div class="row" data-reveal>
+      <button class="car-pause" type="button" id="feat-pause" aria-pressed="false">Pause</button>
+      <div class="car-ctrl">
+        <button class="car-btn" type="button" id="feat-prev" aria-label="Previous watch">{{icon-l}}</button>
+        <button class="car-btn" type="button" id="feat-next" aria-label="Next watch">{{icon-r}}</button>
+      </div>
+    </div>
+  </div>
+  <div class="swiper featured" id="featured" aria-label="Featured watches" data-carousel>
+    <div class="swiper-wrapper" data-render="slides-featured">{{slides-featured}}</div>
+  </div>
+  <div class="wrap"><div class="swiper-pagination" id="feat-progress"></div></div>
+</section>
+
+<section class="story" data-story aria-labelledby="story-h">
+  <div class="story__stage">
+    <div class="wrap story__grid">
+      <div class="story__frame" data-render="story-frame" data-cursor data-cursor-label="Scroll">{{story-frame}}</div>
+      <div>
+        <h2 id="story-h" data-split>Equinox, one turn at a time</h2>
+        <div class="story__chapters" style="margin-top:32px">
+          <div class="story__ch" data-ch><p class="num">40 mm</p><h3>The watch</h3><p class="muted">Champagne gold, polished on the bezel and satin-brushed everywhere else, so the metal glows instead of glaring.</p></div>
+          <div class="story__ch" data-ch><p class="num">11.6 mm</p><h3>The profile</h3><p class="muted">A domed sapphire crystal sits above a case cut slim enough for a cuff, with enough height to carry an annual calendar.</p></div>
+          <div class="story__ch" data-ch><p class="num">122 yrs</p><h3>The dial</h3><p class="muted">A gold moon turns on a midnight enamel disc, and slips one day behind in about a hundred and twenty-two years.</p></div>
+          <div class="story__ch" data-ch><p class="num">60 h</p><h3>The movement</h3><p class="muted">Calibre CV-C4 beats four times a second, with 33 jewels and sixty hours in reserve. You can see it through the caseback.</p></div>
+        </div>
+        <div class="story__prog" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <p style="margin-top:32px"><a class="btn magnetic" href="watch.html?m=equinox">See the Equinox</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hscroll" data-hscroll aria-labelledby="fam-h">
+  <div class="hscroll__pin" data-hpin>
+    <div class="wrap head" style="margin-bottom:32px">
+      <h2 id="fam-h" data-split>Choose a family</h2>
+      <p class="lead" data-reveal>Five collections. Scroll sideways to move through them.</p>
+    </div>
+    <div class="hscroll__scroller" data-hscroller>
+      <div class="hscroll__track" data-htrack data-render="hscroll-items">{{hscroll-items}}</div>
+    </div>
+    <div class="hscroll__bar" aria-hidden="true"><i></i></div>
+  </div>
+</section>
+
+<section class="sec on-navy" aria-labelledby="stat-h">
+  <div class="wrap">
+    <div class="split" style="margin-bottom:64px">
+      <div class="c-7"><h2 id="stat-h" data-split>Every second has a structure</h2></div>
+      <div class="c-5"><p class="lead" data-reveal>Our classic calibre divides each hour into 28,800 equal beats. The Movement Engine lets you pull one apart.</p></div>
+    </div>
+    <div class="stats">
+      <div><p class="num" data-count="28800">28,800</p><p>beats an hour in calibre CV-01</p></div>
+      <div><p class="num" data-count="187">187</p><p>parts in the movement, each finished by hand</p></div>
+      <div><p class="num" data-count="55">55</p><p>hours of power reserve</p></div>
+      <div><p class="num" data-count="5">5</p><p>layers in the interactive Movement Engine</p></div>
+    </div>
+    <div class="row" style="margin-top:64px">
+      <a class="btn magnetic" href="manufacture.html">See how it is made</a>
+      <a class="btn magnetic" href="timekeeping.html">Learn the art of timekeeping</a>
+    </div>
+  </div>
+</section>
+
+<section class="sec on-light" aria-labelledby="strap-h">
+  <div class="wrap head">
+    <h2 id="strap-h" data-split>Shop by strap and material</h2>
+    <p class="lead" data-reveal>Drag to browse. Every strap is made to fit its watch.</p>
+  </div>
+  <div class="wrap">
+    <div class="splide strapstrip" id="straps" aria-label="Straps and materials" data-carousel>
+      <div class="splide__track"><div class="splide__list" data-render="strap-slides">{{strap-slides}}</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="cta-h">
+  <div class="wrap" style="text-align:center;max-width:820px">
+    <h2 id="cta-h" data-split>Come and see one in person</h2>
+    <p class="lead" data-reveal style="margin:24px auto 40px">Boutiques in Geneva, Paris, London and Singapore. Appointments are unhurried.</p>
+    <div class="row" style="justify-content:center"><a class="btn btn--solid magnetic" href="boutique-care.html">Find a boutique</a><a class="btn magnetic" href="contact.html">Enquire</a></div>
+  </div>
+</section>

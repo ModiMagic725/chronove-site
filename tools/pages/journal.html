@@ -1,0 +1,23 @@
+<!-- JOURNAL · light editorial; Owl Carousel for collector voices -->
+<section class="phero">
+  <div class="media-fill grade" aria-hidden="true" data-render="scene:journal" data-parallax>{{scene:journal}}</div>
+  <div class="wrap phero__body">
+    <h1 data-split>Journal</h1>
+    <p class="lead" data-reveal>Notes from the workshop, and from the people who wear what we make.</p>
+  </div>
+</section>
+
+<section class="sec on-light" aria-labelledby="art-h">
+  <div class="wrap">
+    <div class="head"><h2 id="art-h" data-split>Essays</h2><div class="row" id="jfilters" role="group" aria-label="Filter essays by topic"></div></div>
+    <div class="grid-cards" id="jlist" data-render="jcards">{{jcards}}</div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="voice-h">
+  <div class="wrap">
+    <div class="head"><h2 id="voice-h" data-split>Collectors’ voices</h2>
+      <button class="car-pause" type="button" id="voices-pause" aria-pressed="false">Pause</button></div>
+    <div class="owl-carousel owl-theme" id="voices" tabindex="0" aria-label="Collectors’ voices" data-carousel data-render="voices">{{voices}}</div>
+  </div>
+</section>

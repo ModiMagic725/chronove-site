@@ -1,0 +1,39 @@
+<!-- ART OF TIMEKEEPING · porcelain, technical diagrams in SVG -->
+<section class="phero">
+  <div class="media-fill grade" aria-hidden="true" data-render="scene:timekeeping" data-parallax>{{scene:timekeeping}}</div>
+  <div class="wrap phero__body">
+    <h1 data-split>The art of timekeeping</h1>
+    <p class="lead" data-reveal>A watch is a counting machine. Here is how it counts.</p>
+  </div>
+</section>
+
+<section class="sec on-light" aria-labelledby="bw-h">
+  <div class="wrap split" style="align-items:center">
+    <div class="c-6"><div class="diagram" id="bw-diagram" role="img" aria-label="Animated balance wheel and hairspring, slowed down so the swing is visible"></div></div>
+    <div class="c-6 stack">
+      <h2 id="bw-h" data-split>The balance wheel</h2>
+      <p class="prose">A balance wheel and its hairspring swing back and forth at a steady rate. Each swing releases one tooth of the escape wheel, and that is the tick you hear. Choose a beat rate to change the rhythm.</p>
+      <div class="field"><label for="bph">Beat rate</label>
+        <select id="bph"><option value="18000">18,000 vph (2.5 Hz)</option><option value="21600">21,600 vph (3 Hz)</option><option value="28800" selected>28,800 vph (4 Hz)</option><option value="36000">36,000 vph (5 Hz)</option></select></div>
+      <p class="readout" id="bph-out" aria-live="polite"></p>
+      <p class="small muted">Shown at one-eighth speed so the motion can be followed.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="gear-h">
+  <div class="wrap split">
+    <div class="c-5"><h2 id="gear-h" data-split>Gear ratios</h2><p class="lead" data-reveal style="margin-top:16px">Everything between the barrel and the hands is arithmetic.</p></div>
+    <div class="c-7">
+      <div class="tool">
+        <div class="split" style="gap:16px"><div class="c-6"><label for="ga">Driver teeth</label><input id="ga" type="number" min="1" value="60"></div><div class="c-6"><label for="gb">Driven teeth</label><input id="gb" type="number" min="1" value="10"></div></div>
+        <p class="readout" id="gear-out" style="margin-top:24px;font-size:var(--t-md)" aria-live="polite"></p>
+      </div>
+      <div class="prose" style="margin-top:32px" data-reveal>
+        <p>In a typical watch the minute hand turns once an hour and the hour hand once every twelve. A gear train with a 12-to-1 ratio between them makes that possible without any slippage.</p>
+        <p>The same arithmetic sets the beat rate. At 4 Hz the balance makes eight beats a second, and each beat advances the escape wheel by half a tooth. A fifteen-tooth wheel therefore turns once every 3.75 seconds.</p>
+        <p>Watchmakers choose gear ratios to balance three things at once: how long the watch runs on a wind, how smoothly the hand moves, and how much energy is lost to friction.</p>
+      </div>
+    </div>
+  </div>
+</section>

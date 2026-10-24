@@ -1,0 +1,21 @@
+{
+  "name": "chronove",
+  "version": "2.0.0",
+  "private": true,
+  "description": "CHRONOVÉ — static luxury-watch concept site (no build step required).",
+  "scripts": {
+    "start": "node tools/serve.js",
+    "build:pages": "node tools/build-pages.mjs",
+    "verify:media": "node tools/verify-media.mjs",
+    "sri": "node tools/sri.mjs",
+    "test": "node test.js",
+    "test:e2e": "playwright test",
+    "lighthouse": "node tools/lighthouse.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "1.56.0",
+    "lighthouse": "^12.0.0",
+    "chrome-launcher": "^1.1.0"
+  }
+}

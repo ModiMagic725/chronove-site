@@ -1,0 +1,36 @@
+<!-- COMPLICATIONS · graphite instrument panel; four working demos (SVG, no canvas) -->
+<section class="phero">
+  <div class="media-fill grade" aria-hidden="true" data-render="scene:complications" data-parallax>{{scene:complications}}</div>
+  <div class="wrap phero__body">
+    <h1 data-split>Complications</h1>
+    <p class="lead" data-reveal>Anything a watch does besides tell the hours and minutes. Four of them, working.</p>
+  </div>
+</section>
+
+<section class="sec on-graphite" aria-labelledby="tools-h">
+  <div class="wrap">
+    <h2 id="tools-h" class="sr">Interactive demonstrations</h2>
+    <div class="split" style="align-items:stretch">
+      <div class="c-6 tool" aria-labelledby="t1"><h3 id="t1">Chronograph</h3><p class="muted small" style="margin:8px 0 24px">A stopwatch built into the watch. Start, stop, reset.</p>
+        <p class="readout" id="cs" role="timer" aria-live="off">00:00.00</p>
+        <div class="row" style="margin-top:24px"><button class="btn" type="button" id="cgo">Start</button><button class="btn" type="button" id="crs">Reset</button></div></div>
+      <div class="c-6 tool" aria-labelledby="t2"><h3 id="t2">Moon phase</h3><p class="muted small" style="margin:8px 0 16px">Slide through one lunar month of 29.5 days.</p>
+        <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap"><svg id="moon" width="120" height="120" viewBox="0 0 200 200" role="img" aria-label="Moon phase"></svg><div style="flex:1;min-width:200px"><label for="md">Day of the cycle</label><input id="md" type="range" min="0" max="29" value="8"><p class="readout" id="mt" style="font-size:var(--t-md)" aria-live="polite"></p></div></div></div>
+      <div class="c-6 tool" aria-labelledby="t3"><h3 id="t3">Second time zone</h3><p class="muted small" style="margin:8px 0 16px">A GMT hand follows a second city.</p>
+        <label for="gz">City</label><select id="gz"></select><p class="readout" id="gt" style="font-size:var(--t-md);margin-top:16px" aria-live="off"></p></div>
+      <div class="c-6 tool" aria-labelledby="t4"><h3 id="t4">Leap-year check</h3><p class="muted small" style="margin:8px 0 16px">A perpetual calendar knows. Pick any date.</p>
+        <label for="cd">Date</label><input id="cd" type="date" value="2028-02-29"><p class="readout" id="ct" style="font-size:var(--t-md);margin-top:16px" aria-live="polite"></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="why-h">
+  <div class="wrap split">
+    <div class="c-5"><h2 id="why-h" data-split>Why add a complication</h2></div>
+    <div class="c-7 prose" data-reveal>
+      <p>Every complication adds parts, and every part is a place for something to go wrong. The maison adds one only when it earns its place on the wrist.</p>
+      <p>A calendar spares you from checking a phone. A moon phase connects you to the night sky. A countdown timer is useful if you race boats, and beautiful if you do not.</p>
+      <p>The ones in this collection were chosen for their honesty: what the dial shows is what the mechanism does, and nothing is faked.</p>
+    </div>
+  </div>
+</section>

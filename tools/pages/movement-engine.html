@@ -1,0 +1,37 @@
+<!-- MOVEMENT ENGINE · the only page with WebGL (Three.js). Navy "lab" art direction. -->
+<section class="phero">
+  <div class="media-fill grade" aria-hidden="true" data-render="scene:movement" data-parallax>{{scene:movement}}</div>
+  <div class="wrap phero__body">
+    <h1 data-split>Movement Engine</h1>
+    <p class="lead" data-reveal>Pull a watch apart in real time. Drag to turn it, slide to separate the layers, select one to read what it does.</p>
+  </div>
+</section>
+
+<section class="sec on-navy" aria-labelledby="eng-h">
+  <div class="wrap engine">
+    <div class="engine__stage" id="engine-stage">
+      <canvas id="engine-canvas" tabindex="0" role="img" aria-label="Interactive 3D model of a watch in five layers. Drag or use arrow keys to rotate."></canvas>
+      <p class="engine__cap" id="engine-cap">Drag to rotate · click a layer</p>
+    </div>
+    <div class="stack">
+      <h2 id="eng-h" data-split>Five layers, one second at a time</h2>
+      <div class="field"><label for="ex">Exploded view</label><input type="range" id="ex" min="0" max="100" value="0"></div>
+      <div class="row" id="parts" role="group" aria-label="Choose a layer"></div>
+      <div class="row"><button class="btn" type="button" id="toggle">Explode or assemble</button><button class="btn" type="button" id="reset">Reset</button></div>
+      <div class="panel" id="info" aria-live="polite"><p class="muted">Select a layer, or slide to separate the assembly.</p></div>
+      <p class="small muted" id="engine-note">A simplified model, not a physically accurate calibre. The hands follow your device clock.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="read-h">
+  <div class="wrap split">
+    <div class="c-5"><h2 id="read-h" data-split>How to read the engine</h2></div>
+    <div class="c-7 prose" data-reveal>
+      <p>The case is the outermost layer: bevelled, brushed and shaped to hold everything below it. Open the view and you will see its bezel catch the light separately from the flanks.</p>
+      <p>Below it sits the movement, the geartrain and the balance that count time. The gears turn at their true relationships, and the balance swings back and forth, slowed here so you can follow it.</p>
+      <p>The bridge holds the wheels in line. It is the part a watchmaker spends longest finishing, because it is the part you see when the caseback is open.</p>
+      <p>Finally the dial and the hands, driven by your own clock. Nothing here is pre-recorded: the seconds hand is the time where you are.</p>
+    </div>
+  </div>
+</section>

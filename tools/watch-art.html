@@ -1,0 +1,335 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CHRONOVÉ watch art renderer</title>
+<!--
+  Renders the six product views for each model straight from js/data.js (case material, dial, strap, complications).
+  Open via the local server:  /tools/watch-art.html?m=meridian&v=hero      (v = hero|threeQuarter|side|caseback|dial|wrist)
+  Batch export:               python3 tools/render-watch-images.py
+-->
+<style>
+  html, body { margin: 0; background: #0d1014; }
+  #stage { width: 800px; height: 1000px; position: relative; overflow: hidden; }
+  #stage svg { position: absolute; left: 0; top: 0; }
+  .tdwrap { position: absolute; inset: 0; }
+  .persp { position: absolute; inset: 0; perspective: 1700px; perspective-origin: 50% 40%; }
+  .rig { position: absolute; left: 400px; top: 470px; width: 0; height: 0; transform-style: preserve-3d; }
+  .layer { position: absolute; left: -400px; top: -470px; width: 800px; height: 1000px; }
+</style>
+<div id="stage"></div>
+<script type="module">
+import { MODELS } from '/js/data.js';
+
+const S = 10; // px per mm
+const PAL = {
+  steel:    { l: '#F4F6F8', m: '#B9BEC5', d: '#737A84', x: '#383D44' },
+  titanium: { l: '#D5D9DE', m: '#8E959E', d: '#565C65', x: '#2B2F34' },
+  gold:     { l: '#F8EACB', m: '#C5A46D', d: '#8A6C3B', x: '#47351A' },
+};
+const DIALC = {
+  midnight:  { a: '#1f2631', b: '#090b0f', ink: '#ECE6D6', dark: true },
+  porcelain: { a: '#FDFBF6', b: '#E2DCCD', ink: '#1b1e23', dark: false },
+  navy:      { a: '#355275', b: '#0f1a2a', ink: '#F3F2EC', dark: true },
+  graphite:  { a: '#575d65', b: '#23272c', ink: '#EEEAE0', dark: true },
+};
+const STYLE = {
+  'meridian':  { kind: 'classic',   strap: { t: 'calf',   c: '#8d5b34' }, hand: 'dauphine' },
+  'aperture':  { kind: 'skeleton',  strap: { t: 'calf',   c: '#221b18' }, hand: 'lume' },
+  'tidal-300': { kind: 'dive',      strap: { t: 'rubber', c: '#14171b' }, hand: 'lume' },
+  'equinox':   { kind: 'moon',      strap: { t: 'croc',   c: '#432a1d' }, hand: 'dauphine' },
+  'axiom':     { kind: 'rail',      strap: { t: 'calf',   c: '#2b2d31' }, hand: 'sword' },
+  'regatta':   { kind: 'regatta',   strap: { t: 'rubber', c: '#0f1419' }, hand: 'lume' },
+  'solstice':  { kind: 'roman',     strap: { t: 'calf',   c: '#9c5c2c' }, hand: 'breguet' },
+  'lattice':   { kind: 'lattice',   strap: { t: 'croc',   c: '#2e1d16' }, hand: 'lume' },
+  'perpetua':  { kind: 'perpetual', strap: { t: 'calf',   c: '#17181b' }, hand: 'dauphine' },
+};
+
+const q = new URLSearchParams(location.search);
+const slug = q.get('m') || 'meridian', view = q.get('v') || 'hero';
+const m = MODELS.find((x) => x.slug === slug);
+const st = STYLE[slug], pal = PAL[m.caseMaterial], dc = DIALC[m.dial], mat = m.caseMaterial;
+const R = m.diameter * S / 2;
+const LW = m.lugWidth * S;
+const LL = m.lugToLug * S / 2;
+const mix = (a, b, t) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+const rot = (a, s) => `<g transform="rotate(${a})">${s}</g>`;
+const ticks = (n, r1, r2, w, c, skip) => [...Array(n)].map((_, i) => (skip && skip(i)) ? '' : rot(i * 360 / n, `<line x1="0" y1="${-r1}" x2="0" y2="${-r2}" stroke="${c}" stroke-width="${w}"/>`)).join('');
+const SERIF = "'Cormorant Garamond','Liberation Serif',Georgia,'Times New Roman',serif";
+const SANS = "Inter,'Liberation Sans',Arial,sans-serif";
+const txt = (s, x, y, size, o = {}) => `<text x="${x}" y="${y}" text-anchor="${o.a || 'middle'}" dominant-baseline="${o.b || 'central'}" font-family="${o.f || SANS}" font-size="${size}" letter-spacing="${o.ls || 0}" fill="${o.c || dc.ink}" fill-opacity="${o.o ?? 1}" ${o.w ? `font-weight="${o.w}"` : ''}>${s}</text>`;
+
+/* ---------------- shared defs ---------------- */
+function defs() {
+  let s = '<defs>';
+  for (const [k, p] of Object.entries(PAL)) {
+    const st5 = (a, b, c, d, e) => `<stop offset="0" stop-color="${a}"/><stop offset=".28" stop-color="${b}"/><stop offset=".5" stop-color="${c}"/><stop offset=".74" stop-color="${d}"/><stop offset="1" stop-color="${e}"/>`;
+    s += `<linearGradient id="m-${k}" x1="0" y1="0" x2="1" y2="1">${st5(p.l, p.m, p.d, p.m, p.x)}</linearGradient>`;
+    s += `<linearGradient id="mb-${k}" x1="1" y1="1" x2="0" y2="0">${st5(p.l, p.m, p.d, p.m, p.x)}</linearGradient>`;
+    s += `<linearGradient id="mh-${k}" x1="0" y1="0" x2="1" y2="0">${st5(p.x, p.m, p.l, p.m, p.x)}</linearGradient>`;
+    s += `<linearGradient id="mv-${k}" x1="0" y1="0" x2="0" y2="1">${st5(p.x, p.m, p.l, p.m, p.x)}</linearGradient>`;
+  }
+  s += `
+  <radialGradient id="spot" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#3a424e"/><stop offset=".55" stop-color="#1a1f27"/><stop offset="1" stop-color="#090b0e"/></radialGradient>
+  <filter id="stone" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".035 .05" numOctaves="4" seed="7"/><feColorMatrix values="0 0 0 0 .6  0 0 0 0 .64  0 0 0 0 .7  .0 .0 1.1 0 -.42"/></filter>
+  <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 -.12"/><feComposite in2="SourceAlpha" operator="in"/></filter>
+  <filter id="brush" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".004 .9" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 -.35"/><feComposite in2="SourceAlpha" operator="in"/></filter>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="30" stdDeviation="26" flood-color="#000" flood-opacity=".65"/></filter>
+  <filter id="blur6"><feGaussianBlur stdDeviation="7"/></filter>
+  <filter id="blur2"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <pattern id="perl" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="2" fill="none" stroke="#fff" stroke-opacity=".1"/></pattern>
+  <pattern id="cotes" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><rect width="5" height="5" fill="#fff" fill-opacity="0"/><rect width="5" height="2.2" fill="#fff" fill-opacity=".16"/><rect y="2.2" width="5" height="2.8" fill="#000" fill-opacity=".14"/></pattern>
+  <pattern id="scales" width="30" height="24" patternUnits="userSpaceOnUse"><rect width="30" height="24" fill="#fff" fill-opacity="0"/><rect x="2" y="2" width="26" height="20" rx="8" fill="#fff" fill-opacity=".07" stroke="#000" stroke-opacity=".55" stroke-width="1.6"/><rect x="-13" y="14" width="26" height="20" rx="8" fill="#fff" fill-opacity=".07" stroke="#000" stroke-opacity=".55" stroke-width="1.6"/><rect x="17" y="-10" width="26" height="20" rx="8" fill="#fff" fill-opacity=".07" stroke="#000" stroke-opacity=".55" stroke-width="1.6"/></pattern>
+  <linearGradient id="sedge" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset=".16" stop-color="#000" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".08"/><stop offset=".84" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient>
+  <linearGradient id="sfadeT" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></linearGradient>
+  <linearGradient id="sfadeB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></linearGradient>
+  <radialGradient id="dialg" cx="50%" cy="42%" r="70%"><stop offset="0" stop-color="${dc.a}"/><stop offset="1" stop-color="${dc.b}"/></radialGradient>
+  <radialGradient id="silver" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#eceef0"/><stop offset="1" stop-color="#9aa0a8"/></radialGradient>
+  <linearGradient id="glare" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".30"/><stop offset=".38" stop-color="#fff" stop-opacity=".05"/><stop offset=".39" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <linearGradient id="lume" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2F6E2"/><stop offset="1" stop-color="#CFDAB8"/></linearGradient>
+  <mask id="edgeblur"><rect width="800" height="1000" fill="#fff"/><circle cx="400" cy="500" r="330" fill="#000" filter="url(#blur6)"/></mask>
+  </defs>`;
+  return s;
+}
+
+/* ---------------- backdrop ---------------- */
+const backdrop = () => `<rect width="800" height="1000" fill="#0d1014"/><rect width="800" height="1000" fill="url(#spot)"/><rect width="800" height="1000" filter="url(#stone)" opacity=".15"/>`;
+
+/* ---------------- movement art (skeleton dials & casebacks) ---------------- */
+function movement(R2, o = {}) {
+  const k = o.mat || mat, mm = `url(#m-${k})`, hl = PAL[k].l, accent = o.accent || PAL[k].m;
+  const gear = (x, y, r, w, teeth) => `<g transform="translate(${x} ${y})"><circle r="${r}" fill="none" stroke="${mm}" stroke-width="${w}" stroke-dasharray="${(2 * Math.PI * r / teeth / 2).toFixed(2)} ${(2 * Math.PI * r / teeth / 2).toFixed(2)}"/><circle r="${r - w / 2 - 1.5}" fill="none" stroke="${mm}" stroke-width="2.4"/>${[0, 60, 120].map((a) => rot(a, `<rect x="${-(r - 4)}" y="-1.2" width="${(r - 4) * 2}" height="2.4" fill="${mm}"/>`)).join('')}<circle r="3.4" fill="${mm}"/><circle r="1.5" fill="#b3202a"/></g>`;
+  const bridge = (d, w) => `<path d="${d}" stroke="${mm}" stroke-width="${w}" stroke-linecap="round" fill="none"/><path d="${d}" stroke="url(#cotes)" stroke-width="${w}" stroke-linecap="round" fill="none"/><path d="${d}" stroke="${hl}" stroke-opacity=".7" stroke-width=".9" stroke-linecap="round" fill="none" transform="translate(-.8 -.8)"/>`;
+  const screw = (x, y) => `<g transform="translate(${x} ${y})"><circle r="2.1" fill="#2c4f8a"/><circle r="2.1" fill="none" stroke="#9fb7e0" stroke-opacity=".6" stroke-width=".5"/><line x1="-1.4" y1="1" x2="1.4" y2="-1" stroke="#0e1d38" stroke-width=".6"/></g>`;
+  let s = `<g transform="scale(${R2 / 100})"><clipPath id="mc"><circle r="100"/></clipPath><g clip-path="url(#mc)"><circle r="100" fill="#0c0f13"/><rect x="-100" y="-100" width="200" height="200" fill="url(#perl)"/>`;
+  s += gear(34, -30, 22, 5, 26) + gear(-42, 36, 15, 4, 18) + gear(-52, -4, 11, 3.4, 14);
+  s += `<circle cx="-24" cy="-24" r="34" fill="${mm}"/><circle cx="-24" cy="-24" r="34" fill="url(#cotes)"/><circle cx="-24" cy="-24" r="34" fill="none" stroke="${hl}" stroke-opacity=".8" stroke-width="1"/><circle cx="-24" cy="-24" r="21" fill="#0c0f13" opacity=".92"/><path d="M-24,-24 m0,-2 a2,2 0 1,1 -2,2 a6,6 0 1,1 6,-6 a10,10 0 1,1 -10,10 a14,14 0 1,1 14,-14 a18,18 0 1,1 -18,18" fill="none" stroke="${accent}" stroke-width="1.6"/>`;
+  s += bridge('M-24,-24 L34,-30', 8) + bridge('M-24,-24 L-42,36', 7) + bridge('M2,58 C 30,52 54,30 58,4', 8);
+  // balance wheel
+  s += `<g transform="translate(6 44)"><circle r="26" fill="#0c0f13" opacity=".85"/><circle r="22" fill="none" stroke="${mm}" stroke-width="5"/>${[0, 90].map((a) => rot(a, `<rect x="-22" y="-1.3" width="44" height="2.6" fill="${mm}"/>`)).join('')}${[0, 72, 144, 216, 288].map((a) => rot(a, `<circle cy="-22" r="2.2" fill="${accent}"/>`)).join('')}<path d="M0,0 m0,-2 a2,2 0 1,1 -2,2 a4,4 0 1,1 4,-4 a7,7 0 1,1 -7,7 a10,10 0 1,1 10,-10 a13,13 0 1,1 -13,13" fill="none" stroke="#8fa3c2" stroke-width=".9"/><circle r="2.6" fill="${mm}"/></g>`;
+  if (o.rotor) s += `<g transform="rotate(${o.rotor})"><path d="M-84,0 A84,84 0 0 1 84,0 L40,0 A40,40 0 0 0 -40,0 Z" fill="${mm}" opacity=".96"/><path d="M-84,0 A84,84 0 0 1 84,0 L40,0 A40,40 0 0 0 -40,0 Z" fill="url(#cotes)"/><path d="M-84,0 A84,84 0 0 1 84,0" fill="none" stroke="${hl}" stroke-width="1.6"/>${txt('CHRONOVÉ', 0, -62, 7, { c: PAL[k].x, ls: 2, w: 600 })}<circle r="9" fill="${mm}"/><circle r="9" fill="none" stroke="${hl}" stroke-width=".8"/></g>`;
+  s += screw(-60, -56) + screw(62, -10) + screw(-8, 82) + screw(50, 58) + screw(-72, 20);
+  return s + '</g></g>';
+}
+
+/* ---------------- hands ---------------- */
+function hands(rd, o = {}) {
+  const u = rd / 100, kind = o.kind || st.hand;
+  const base = dc.dark ? `url(#mv-${mat === 'steel' ? 'steel' : mat})` : '#27364f';
+  const edge = dc.dark ? PAL[mat].x : '#0f1623';
+  const hr = 305, mn = 60, sc = o.sec ?? 150;
+  let H, M;
+  if (kind === 'dauphine') { H = `<path d="M0,13 L-5,0 L0,-52 L5,0 Z" fill="${base}" stroke="${edge}" stroke-width=".6"/><path d="M0,13 L0,-52 L5,0 Z" fill="#000" fill-opacity=".22"/>`; M = `<path d="M0,15 L-3.8,0 L0,-84 L3.8,0 Z" fill="${base}" stroke="${edge}" stroke-width=".6"/><path d="M0,15 L0,-84 L3.8,0 Z" fill="#000" fill-opacity=".22"/>`; }
+  else if (kind === 'sword') { H = `<path d="M-3,12 L-4.4,-8 L0,-56 L4.4,-8 L3,12 Z" fill="${base}" stroke="${edge}" stroke-width=".6"/><path d="M0,12 L0,-56 L4.4,-8 L3,12 Z" fill="#000" fill-opacity=".2"/>`; M = `<path d="M-2.6,14 L-2.6,-86 L2.6,-86 L2.6,14 Z" fill="${base}" stroke="${edge}" stroke-width=".6"/><path d="M0,14 L0,-86 L2.6,-86 L2.6,14 Z" fill="#000" fill-opacity=".2"/>`; }
+  else if (kind === 'breguet') { const b = '#2a3f66'; H = `<line x1="0" y1="12" x2="0" y2="-34" stroke="${b}" stroke-width="3"/><circle cy="-40" r="6.4" fill="none" stroke="${b}" stroke-width="2.4"/><path d="M0,-46 L0,-58" stroke="${b}" stroke-width="1.6"/>`; M = `<line x1="0" y1="14" x2="0" y2="-62" stroke="${b}" stroke-width="2.4"/><circle cy="-69" r="6" fill="none" stroke="${b}" stroke-width="2.2"/><path d="M0,-75 L0,-88" stroke="${b}" stroke-width="1.4"/>`; }
+  else { // lume
+    const fr = `url(#mv-${mat})`;
+    H = `<path d="M-6,12 L-6.4,-8 L0,-58 L6.4,-8 L6,12 Z" fill="${fr}" stroke="${edge}" stroke-width=".7"/><path d="M-3,2 L-3.2,-9 L0,-48 L3.2,-9 L3,2 Z" fill="url(#lume)"/>`;
+    M = `<path d="M-4.6,14 L-4.8,-8 L0,-88 L4.8,-8 L4.6,14 Z" fill="${fr}" stroke="${edge}" stroke-width=".7"/><path d="M-2.2,4 L-2.4,-8 L0,-78 L2.4,-8 L2.2,4 Z" fill="url(#lume)"/>`;
+  }
+  const shadow = (g, a) => `<g transform="translate(2.2 3.4)" opacity=".38" filter="url(#blur2)">${g.replace(/url\(#[^)]+\)|#[0-9a-fA-F]{6}/g, '#000')}</g>`;
+  const secC = o.secColor || (st.kind === 'regatta' || st.kind === 'dive' ? '#d9432f' : st.kind === 'rail' ? '#C5A46D' : PAL[mat].l);
+  const secHand = o.noSec ? '' : `<g transform="rotate(${sc})"><line y1="24" y2="-90" stroke="${secC}" stroke-width="1.1"/><circle cy="-62" r="${st.kind === 'regatta' || st.kind === 'dive' ? 4 : 0}" fill="${secC}"/></g>`;
+  return `<g transform="scale(${u})">${rot(hr, shadow(H))}${rot(mn, shadow(M))}${rot(hr, H)}${rot(mn, M)}${secHand}<circle r="5.4" fill="url(#m-${mat})" stroke="${edge}" stroke-width=".6"/><circle r="1.8" fill="${PAL[mat].x}"/></g>`;
+}
+
+/* ---------------- dials (rd = 100 units) ---------------- */
+const metalIdx = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#mh-${mat})" stroke="${dc.dark ? 'none' : '#555'}" stroke-width=".25"/>`;
+function dialFace(rd) {
+  const k = st.kind, ink = dc.ink;
+  let s = `<g transform="scale(${rd / 100})"><circle r="100" fill="url(#dialg)"/>`;
+  if (k === 'dive' || k === 'rail' || k === 'regatta') s += `<g filter="url(#${k === 'rail' ? 'brush' : 'grain'})" opacity="${k === 'rail' ? '.5' : '.35'}"><circle r="100" fill="#fff"/></g>`;
+  if (k === 'dive') s += [...Array(36)].map((_, i) => rot(i * 10, `<rect x="-.7" y="-100" width="1.4" height="100" fill="#fff" opacity=".05"/>`)).join('');
+  if (k === 'classic') {
+    s += ticks(60, 94, 97.5, .5, ink, null) + [...Array(12)].map((_, i) => rot(i * 30, i === 0 ? metalIdx(-3.4, -92, 2.6, 14) + metalIdx(.8, -92, 2.6, 14) : metalIdx(-1.7, -92, 3.4, 13))).join('');
+    s += `<g transform="translate(0 44)"><circle r="18" fill="none" stroke="${ink}" stroke-opacity=".5" stroke-width=".6"/><circle r="13" fill="none" stroke="${ink}" stroke-opacity=".2" stroke-width=".4"/>${ticks(12, 13, 17, .6, ink)}${txt('', 0, 0, 1)}<g transform="rotate(205)"><line y1="3" y2="-14" stroke="#27364f" stroke-width="1.1"/></g><circle r="1.4" fill="#27364f"/></g>`;
+    s += txt('CHRONOVÉ', 0, -50, 7, { ls: 2.6, f: SERIF, w: 600 }) + txt('AUTOMATIC', 0, -41, 3.4, { ls: 1.6, o: .6 });
+  } else if (k === 'skeleton') {
+    s += `<circle r="100" fill="#0b0e12"/><circle r="80" fill="#0c0f13"/>`;
+    s += `<g transform="scale(.8)">${movement(100)}</g>`;
+    s += `<circle r="80" fill="none" stroke="url(#m-${mat})" stroke-width="1.6"/>` + ticks(60, 91, 97, .6, ink) + [...Array(12)].map((_, i) => rot(i * 30, metalIdx(-2, -97, 4, 11))).join('') + txt('APERTURE', 0, 70, 4, { ls: 2, o: .55 });
+  } else if (k === 'dive') {
+    s += ticks(60, 93, 97, .8, ink, (i) => i % 5 === 0);
+    s += [...Array(12)].map((_, i) => {
+      if (i === 0) return `<path d="M0,-91 L8,-76 L-8,-76 Z" fill="url(#lume)" stroke="url(#m-${mat})" stroke-width="1.4"/>`;
+      if (i === 3) return '';
+      if (i % 3 === 0) return rot(i * 30, `<rect x="-4" y="-91" width="8" height="19" rx="1.2" fill="url(#lume)" stroke="url(#m-${mat})" stroke-width="1.2"/>`);
+      return rot(i * 30, `<circle cy="-82" r="5" fill="url(#lume)" stroke="url(#m-${mat})" stroke-width="1.2"/>`);
+    }).join('');
+    s += `<g transform="translate(64 0)"><rect x="-13" y="-9.5" width="26" height="19" fill="url(#m-${mat})"/><rect x="-11.6" y="-8.2" width="23.2" height="16.4" fill="#f6f4ec"/>${txt('21', 0, 0.5, 11.5, { c: '#111', w: 600 })}</g>`;
+    s += txt('CHRONOVÉ', 0, -46, 7, { ls: 2.4, f: SERIF, w: 600 }) + txt('TIDAL 300', 0, 38, 5.2, { ls: 2.4, w: 600 }) + txt('300 M / 1000 FT', 0, 46, 3.6, { ls: 1.2, o: .7 });
+  } else if (k === 'moon') {
+    s += ticks(60, 94, 97.5, .45, ink, null) + [...Array(12)].map((_, i) => rot(i * 30, metalIdx(-1.7, -92, 3.4, 14))).join('');
+    const ap = (x, t) => `<g transform="translate(${x} -30)"><rect x="-17" y="-8.5" width="34" height="17" rx="1.5" fill="url(#m-${mat})"/><rect x="-15.6" y="-7.2" width="31.2" height="14.4" rx="1" fill="#06080b"/>${txt(t, 0, .4, 8, { c: PAL[mat].l, ls: 1.2, w: 500 })}</g>`;
+    s += ap(-36, 'TUE') + ap(36, 'OCT');
+    s += `<g transform="translate(0 50)"><clipPath id="mw"><circle r="21"/></clipPath><circle r="23.4" fill="url(#m-${mat})"/><circle r="21" fill="#071a3d"/><g clip-path="url(#mw)"><circle r="21" fill="#0b2a63"/>${[[-14, -12], [10, -14], [14, 6], [-6, 12], [2, -4], [-16, 6], [16, -2]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#fff" opacity=".85"/>`).join('')}${[-11, 13].map((x) => `<circle cx="${x}" cy="4" r="11.5" fill="${PAL.gold.m}"/><circle cx="${x - 3}" cy="1" r="2.4" fill="${PAL.gold.d}" opacity=".6"/><circle cx="${x + 3}" cy="7" r="1.8" fill="${PAL.gold.d}" opacity=".6"/>`).join('')}</g></g>`;
+    s += txt('CHRONOVÉ', 0, -60, 6.2, { ls: 2.6, f: SERIF, w: 600, c: PAL.gold.m }) + txt('ANNUAL CALENDAR', 0, -53, 3, { ls: 1.5, o: .6 });
+  } else if (k === 'rail') {
+    s += `<circle r="96.5" fill="none" stroke="${ink}" stroke-width=".7" opacity=".8"/><circle r="90" fill="none" stroke="${ink}" stroke-width=".7" opacity=".8"/>` + ticks(60, 90, 96.5, .5, ink) + ticks(12, 90, 96.5, 1.6, ink);
+    s += [...Array(12)].map((_, i) => rot(i * 30, `<rect x="-1.6" y="-84" width="3.2" height="15" fill="${ink}"/>`)).join('');
+    s += txt('AXIOM', 0, -38, 8, { ls: 5, f: SERIF, w: 600 }) + txt('AUTOMATIC', 0, 38, 3.8, { ls: 2, o: .65 });
+  } else if (k === 'regatta') {
+    const cols = ['#f0cf4d', '#f0a72f', '#e8742c', '#d93d2e', '#b3202a'];
+    const arc = (a0, a1, r0, r1) => { const p = (a, r) => [r * Math.sin(a * Math.PI / 180), -r * Math.cos(a * Math.PI / 180)]; const [x0, y0] = p(a0, r1), [x1, y1] = p(a1, r1), [x2, y2] = p(a1, r0), [x3, y3] = p(a0, r0); return `M${x0},${y0} A${r1},${r1} 0 0 1 ${x1},${y1} L${x2},${y2} A${r0},${r0} 0 0 0 ${x3},${y3} Z`; };
+    s += cols.map((c, i) => `<path d="${arc(i * 6 + 8.4, i * 6 + 13.6, 64, 84)}" fill="${c}"/>`).join('');
+    s += txt('5', 33, -82, 6, { w: 700 });
+    s += ticks(60, 93, 97, .8, ink, (i) => i % 5 === 0);
+    s += [...Array(12)].map((_, i) => (i === 3 || (i >= 0 && i <= 0)) ? '' : rot(i * 30, `<rect x="-2.6" y="-92" width="5.2" height="${i % 3 === 0 ? 17 : 12}" rx="1" fill="url(#lume)" stroke="url(#m-${mat})" stroke-width="1"/>`)).join('') + rot(0, `<path d="M0,-92 L8,-76 L-8,-76 Z" fill="url(#lume)" stroke="url(#m-${mat})" stroke-width="1.2"/>`);
+    s += `<g transform="translate(62 0)"><rect x="-12" y="-9" width="24" height="18" fill="url(#m-${mat})"/><rect x="-10.8" y="-7.8" width="21.6" height="15.6" fill="#f6f4ec"/>${txt('21', 0, .4, 11, { c: '#111', w: 600 })}</g>`;
+    s += txt('CHRONOVÉ', 0, -46, 7, { ls: 2.4, f: SERIF, w: 600 }) + txt('REGATTA', 0, 40, 6, { ls: 3.2, w: 600 }) + txt('COUNTDOWN · 100 M', 0, 48, 3.4, { ls: 1.2, o: .7 });
+  } else if (k === 'roman') {
+    const rn = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+    s += `<circle r="97" fill="none" stroke="${ink}" stroke-width=".6" opacity=".8"/><circle r="92" fill="none" stroke="${ink}" stroke-width=".6" opacity=".8"/>` + ticks(60, 92, 97, .4, ink) + ticks(12, 92, 97, 1.1, ink);
+    s += rn.map((r, i) => { const a = i * 30 * Math.PI / 180; return txt(r, (Math.sin(a) * 76).toFixed(1), (-Math.cos(a) * 76).toFixed(1), i % 3 === 0 ? 17 : 14, { f: SERIF, w: 600, c: '#2a2f3a' }); }).join('');
+    s += txt('CHRONOVÉ', 0, -42, 6.4, { ls: 2.4, f: SERIF, w: 600, c: '#2a2f3a' }) + txt('SOLSTICE · N° 07 / 99', 0, -34, 3.2, { ls: 1.4, c: '#2a2f3a', o: .7 });
+    s += `<g transform="translate(0 40)"><circle r="16" fill="none" stroke="${ink}" stroke-opacity=".5" stroke-width=".5"/>${ticks(60, 13, 16, .35, ink)}<g transform="rotate(200)"><line y1="2" y2="-13" stroke="#2a3f66" stroke-width="1"/></g><circle r="1.2" fill="#2a3f66"/></g>`;
+  } else if (k === 'lattice') {
+    s += `<circle r="100" fill="#0b0e12"/>` + `<g transform="scale(.82)">${movement(100, { accent: PAL.gold.m, rotor: 22 })}</g>`;
+    const lat = [...Array(15)].map((_, i) => { const o2 = -100 + i * 14.3; return `<line x1="${o2}" y1="-100" x2="${o2 + 200}" y2="100" /><line x1="${o2}" y1="100" x2="${o2 + 200}" y2="-100"/>`; }).join('');
+    s += `<clipPath id="lc"><circle r="82"/></clipPath><g clip-path="url(#lc)" stroke="url(#m-gold)" stroke-width="2.6" opacity=".92">${lat}</g><g clip-path="url(#lc)" stroke="${PAL.gold.l}" stroke-width=".5" opacity=".9" transform="translate(-.8 -.8)">${lat}</g>`;
+    s += `<circle r="82" fill="none" stroke="url(#m-gold)" stroke-width="2.2"/>` + ticks(60, 90, 97, .5, ink) + [...Array(12)].map((_, i) => rot(i * 30, metalIdx(-2, -97, 4, 11))).join('') + txt('LATTICE', 0, 66, 4.4, { ls: 2.4, c: PAL.gold.l, o: .8 });
+  } else if (k === 'perpetual') {
+    s += ticks(60, 94, 97.5, .45, ink) + [...Array(12)].map((_, i) => rot(i * 30, metalIdx(-1.7, -92, 3.4, 13))).join('');
+    const sub = (x, y, n, hand) => `<g transform="translate(${x} ${y})"><circle r="23.6" fill="url(#m-${mat})"/><circle r="21.6" fill="url(#silver)"/>${[6, 11, 16].map((r) => `<circle r="${r}" fill="none" stroke="#000" stroke-opacity=".08" stroke-width=".5"/>`).join('')}${ticks(n, 18, 21, .5, '#222')}${n === 12 ? [...Array(4)].map((_, i) => { const a = i * 90 * Math.PI / 180; return txt(['12', '3', '6', '9'][i], (Math.sin(a) * 13).toFixed(1), (-Math.cos(a) * 13).toFixed(1), 4.4, { c: '#222' }); }).join('') : ''}<g transform="rotate(${hand})"><line y1="3" y2="-15" stroke="#14233f" stroke-width="1"/></g><circle r="1.3" fill="#14233f"/></g>`;
+    s += sub(-40, 0, 12, 250) + sub(40, 0, 31, 118);
+    s += `<g transform="translate(0 48)"><clipPath id="pm"><circle r="16"/></clipPath><circle r="18.4" fill="url(#m-${mat})"/><circle r="16" fill="#0a2457"/><g clip-path="url(#pm)">${[[-9, -8], [8, -9], [10, 4], [-4, 8], [-10, 3]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".8" fill="#fff"/>`).join('')}<circle cx="2" cy="2" r="9.5" fill="${PAL.steel.l}"/><circle cx="-1" cy="-1" r="2" fill="#aeb4bb" opacity=".7"/><circle cx="5" cy="5" r="1.5" fill="#aeb4bb" opacity=".7"/></g></g>`;
+    s += `<g transform="translate(64 38)"><circle r="8.6" fill="url(#m-${mat})"/><circle r="7.1" fill="#06080b"/>${txt('3', 0, .4, 7, { c: '#fff' })}</g>`;
+    s += txt('CHRONOVÉ', 0, -52, 6.6, { ls: 2.6, f: SERIF, w: 600 }) + txt('PERPETUAL CALENDAR', 0, -45, 3, { ls: 1.4, o: .6 });
+  }
+  return s + '</g>';
+}
+
+/* ---------------- front of the watch (centred on 0,0) ---------------- */
+function strapPath(sign, len) { // sign -1 = 12 o'clock side, +1 = 6 o'clock side
+  const y0 = sign * (LL - 22), y1 = sign * len, w0 = LW / 2, w1 = LW * .44;
+  return `M${-w0},${y0} L${w0},${y0} L${w1},${y1} L${-w1},${y1} Z`;
+}
+function strap(sign, len, o = {}) {
+  const c = st.strap.c, t = st.strap.t, w0 = LW / 2, y0 = sign * (LL - 22);
+  const id = 'sp' + (sign < 0 ? 'T' : 'B') + (o.id || ''), d = strapPath(sign, len);
+  let s = `<clipPath id="${id}"><path d="${d}"/></clipPath><path d="${d}" fill="${c}"/><g clip-path="url(#${id})">`;
+  const yy = Math.min(y0, sign * len), hh = Math.abs(len - Math.abs(y0));
+  if (t === 'croc') s += `<rect x="${-w0}" y="${yy}" width="${LW}" height="${hh}" fill="url(#scales)"/>`;
+  if (t === 'rubber') { for (let y = 0; y < hh; y += 15) s += `<rect x="${-w0}" y="${sign < 0 ? y0 - y - 6 : y0 + y}" width="${LW}" height="6" fill="#fff" fill-opacity=".05"/><rect x="${-w0}" y="${sign < 0 ? y0 - y - 1 : y0 + y + 5}" width="${LW}" height="3" fill="#000" fill-opacity=".35"/>`; }
+  s += `<rect x="${-w0}" y="${yy}" width="${LW}" height="${hh}" fill="url(#sedge)"/><rect x="${-w0}" y="${yy}" width="${LW}" height="${hh}" fill="url(#${sign < 0 ? 'sfadeT' : 'sfadeB'})"/><rect x="${-w0}" y="${yy}" width="${LW}" height="${hh}" filter="url(#grain)" opacity=".5"/>`;
+  if (t !== 'rubber') { const inset = LW * .08; s += [-1, 1].map((e) => `<line x1="${e * (w0 - inset)}" y1="${y0}" x2="${e * (w0 * .88 - inset)}" y2="${sign * len}" stroke="${mix(c, '#ffffff', .55)}" stroke-width="1.8" stroke-dasharray="7 5" opacity=".85"/>`).join(''); }
+  if (sign > 0) for (let i = 0; i < 5; i++) { const y = y0 + 150 + i * 62; s += `<circle cy="${y}" r="6" fill="#0a0a0a" opacity=".85"/><circle cy="${y}" r="7.5" fill="none" stroke="${mix(c, '#ffffff', .35)}" stroke-width="1.4" opacity=".7"/>`; }
+  return s + '</g>';
+}
+function lugs() {
+  const inner = LW / 2 + 1, th = 34;
+  const one = (sx, sy) => `<g transform="scale(${sx} ${sy})"><path d="M${inner},${-R * .55} L${inner},${-(LL + 2)} Q${inner},${-(LL + 8)} ${inner + 8},${-(LL + 8)} L${inner + th - 8},${-(LL + 6)} Q${inner + th},${-(LL - 6)} ${inner + th},${-(LL - 30)} L${inner + th + 6},${-R * .55} Z" fill="url(#mv-${mat})" stroke="${PAL[mat].x}" stroke-width="1.4"/><path d="M${inner + 4},${-R * .6} L${inner + 4},${-LL + 8} L${inner + th - 6},${-LL + 8}" stroke="${PAL[mat].l}" stroke-opacity=".7" fill="none" stroke-width="1.6"/></g>`;
+  return one(1, 1) + one(-1, 1) + one(1, -1) + one(-1, -1);
+}
+function crown() {
+  const y = 0, h = 40 + (st.kind === 'dive' ? 8 : 0);
+  let s = `<rect x="${R - 6}" y="-12" width="18" height="24" fill="url(#mv-${mat})"/><rect x="${R + 10}" y="${-h / 2}" width="26" height="${h}" rx="5" fill="url(#mv-${mat})" stroke="${PAL[mat].x}" stroke-width="1.2"/>`;
+  for (let i = 0; i < 7; i++) s += `<line x1="${R + 14 + i * 3.4}" y1="${-h / 2 + 2}" x2="${R + 14 + i * 3.4}" y2="${h / 2 - 2}" stroke="${PAL[mat].x}" stroke-opacity=".7" stroke-width="1.2"/>`;
+  if (st.kind === 'regatta') s += [-1, 1].map((e) => `<g transform="rotate(${e * 32})"><rect x="${R - 4}" y="-11" width="26" height="22" rx="4" fill="url(#mv-${mat})" stroke="${PAL[mat].x}" stroke-width="1.2"/><rect x="${R + 16}" y="-9" width="4" height="18" rx="1.5" fill="${PAL[mat].x}" opacity=".5"/></g>`).join('');
+  return s;
+}
+function caseFront(o = {}) {
+  const rd = st.kind === 'dive' ? R * .70 : R * .80;
+  let s = '';
+  if (!o.noCrown) s += crown();
+  if (!o.noLugs) s += lugs();
+  s += `<circle r="${R}" fill="url(#m-${mat})" stroke="${PAL[mat].x}" stroke-width="1.5"/><circle r="${R}" fill="#fff" filter="url(#brush)" opacity=".28"/>`;
+  s += `<circle r="${R * .965}" fill="url(#mb-${mat})"/><circle r="${R * .93}" fill="url(#m-${mat})"/>`;
+  if (st.kind === 'dive') {
+    s += `<circle r="${R * .905}" fill="#15181d"/><circle r="${R * .905}" fill="none" stroke="${PAL[mat].m}" stroke-width="1.6"/><circle r="${R * .74}" fill="none" stroke="#000" stroke-opacity=".6" stroke-width="1.2"/>`;
+    const b = R * .905, g = `<g>${ticks(60, b * .96, b * .76, 1.4, '#e8e8e2', (i) => i % 5 === 0 || (i < 15 && i % 5 !== 0 && false))}</g>`;
+    s += `<g>${[...Array(60)].map((_, i) => i % 5 === 0 ? '' : (i > 15 ? '' : rot(i * 6, `<rect x="-.9" y="${-b * .96}" width="1.8" height="${b * .1}" fill="#e8e8e2"/>`))).join('')}${[...Array(12)].map((_, i) => i === 0 ? `<g transform="translate(0 ${-b * .86})"><circle r="${b * .075}" fill="url(#lume)" stroke="#000" stroke-width=".8"/></g>` : rot(i * 30, txt(i % 2 === 0 ? String(i * 5) : '', 0, -b * .86, R * .11, { c: '#eceae2', w: 600 }) + (i % 2 ? `<rect x="-2" y="${-b * .92}" width="4" height="${b * .1}" fill="#eceae2"/>` : ''))).join('')}</g>`;
+    s += [...Array(60)].map((_, i) => i % 5 === 0 && i < 15 && i ? rot(i * 6, `<rect x="-1.2" y="${-b * .97}" width="2.4" height="${b * .1}" fill="#eceae2"/>`) : '').join('');
+    s += `<circle r="${R * .74}" fill="${PAL[mat].m}"/>`;
+  } else s += `<circle r="${R * .835}" fill="#000" fill-opacity=".35"/><circle r="${R * .83}" fill="url(#mb-${mat})"/>`;
+  s += `<g>${dialFace(rd)}</g>`;
+  if (!o.noHands) s += hands(rd, o.hands || {});
+  s += `<g clip-path="url(#cg)"></g><clipPath id="cg"><circle r="${rd}"/></clipPath><circle r="${rd}" fill="url(#glare)" clip-path="url(#cg)" opacity="${o.glare ?? 1}"/><circle r="${rd}" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="1.5"/>`;
+  return s;
+}
+function frontWatch(o = {}) {
+  const len = o.strapLen || 700;
+  return `<g>${o.noStrap ? '' : strap(-1, len, o) + strap(1, len, o)}${caseFront(o)}</g>`;
+}
+
+/* ---------------- views ---------------- */
+const stage = document.getElementById('stage');
+const svg = (inner, extra = '') => `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" ${extra}>${inner}</svg>`;
+const D = defs();
+
+function hero() {
+  return svg(D + backdrop() + `<g transform="translate(400 470) rotate(-4) scale(1.1)" filter="url(#shadow)">${frontWatch()}</g>`);
+}
+function dialView() {
+  const sc = 800 / (R * 1.62);
+  const w = `<g transform="translate(400 500) scale(${sc})">${caseFront({ noLugs: true, noCrown: true })}</g>`;
+  return svg(D + `<rect width="800" height="1000" fill="#0b0d10"/>` + w + `<g mask="url(#edgeblur)"><g filter="url(#blur6)">${w}</g></g><defs><radialGradient id="vig" cx="50%" cy="50%" r="72%"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".75"/></radialGradient></defs><rect width="800" height="1000" fill="url(#vig)"/>`);
+}
+function casebackView() {
+  const win = st.kind === 'dive' || st.kind === 'regatta' ? .6 : .74;
+  const txtPath = `<defs><path id="cbp" d="M0,${R * .895} A${R * .895},${R * .895} 0 1 1 0,${R * -.895} A${R * .895},${R * .895} 0 1 1 0,${R * .895}"/></defs>`;
+  const label = `CHRONOVÉ · ${m.name.toUpperCase()} · ${m.movement.calibre} · ${m.waterResistance} M · ${m.edition ? 'N° 07/' + m.edition : 'SAPPHIRE'}`;
+  const body = `<g>${strap(-1, 700, { id: 'c' })}${strap(1, 700, { id: 'c' })}${lugs()}
+   <circle r="${R}" fill="url(#m-${mat})" stroke="${PAL[mat].x}" stroke-width="1.5"/><circle r="${R}" fill="#fff" filter="url(#brush)" opacity=".28"/>
+   <circle r="${R * .96}" fill="url(#mb-${mat})"/><circle r="${R * .93}" fill="url(#m-${mat})"/>
+   ${txtPath}<text font-family="${SANS}" font-size="${R * .052}" letter-spacing="2" font-weight="600" fill="${PAL[mat].x}" fill-opacity=".85"><textPath href="#cbp" startOffset="50%" text-anchor="middle">${label}</textPath></text>
+   ${[...Array(8)].map((_, i) => rot(i * 45 + 22.5, `<g transform="translate(0 ${-R * .8})"><circle r="${R * .035}" fill="${PAL[mat].d}"/><circle r="${R * .035}" fill="none" stroke="${PAL[mat].l}" stroke-width="1"/><line x1="${-R * .022}" y1="${R * .01}" x2="${R * .022}" y2="${-R * .01}" stroke="${PAL[mat].x}" stroke-width="1.4"/></g>`)).join('')}
+   <circle r="${R * (win + .05)}" fill="url(#mb-${mat})"/><circle r="${R * (win + .02)}" fill="#000" fill-opacity=".5"/>
+   ${movement(R * win, { rotor: 28 + (m.id * 37) % 90 })}
+   <circle r="${R * win}" fill="url(#glare)" opacity=".7"/></g>`;
+  return svg(D + backdrop() + `<g transform="translate(400 470) rotate(-4)" filter="url(#shadow)">${body}</g>`);
+}
+function sideView() {
+  const T = m.thickness * S, Wc = R * 2, cx = 400, cy = 520;
+  const top = cy - T / 2, bot = cy + T / 2, dome = 14, bk = 14;
+  const mt = `url(#mv-${mat})`, mt2 = `url(#mh-${mat})`, c = st.strap.c, sw = st.strap.t === 'rubber' ? 30 : 24;
+  const strapSide = (sx) => {
+    const x0 = cx + sx * (LL - 6), d = `M${x0},${cy + 4} C ${x0 + sx * 110},${cy + 4} ${x0 + sx * 175},${cy + 70} ${x0 + sx * 196},${cy + 360}`;
+    return `<path d="${d}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="${sw + 4}" transform="translate(0 4)"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${sw}"/><path d="${d}" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3" transform="translate(${-sx * 7} 0)"/><path d="${d}" fill="none" stroke="${mix(c, '#ffffff', .5)}" stroke-opacity=".7" stroke-width="1.4" stroke-dasharray="7 5" transform="translate(${sx * 0} ${-sw / 2 + 4})"/>`;
+  };
+  const lug = (sx) => `<path d="M${cx + sx * Wc * .40},${top + 2} L${cx + sx * (LL - 2)},${top + 14} Q${cx + sx * (LL + 6)},${cy + 6} ${cx + sx * (LL - 4)},${bot + 4} L${cx + sx * Wc * .40},${bot - 4} Z" fill="${mt}" stroke="${PAL[mat].x}" stroke-width="1.4"/>`;
+  const cr = st.kind === 'dive' ? 19 : 16;
+  const g = `${strapSide(-1)}${strapSide(1)}${lug(-1)}${lug(1)}
+   <path d="M${cx - Wc * .38},${bot - 2} L${cx - Wc * .38},${bot + bk} Q${cx - Wc * .38},${bot + bk + 4} ${cx - Wc * .34},${bot + bk + 4} L${cx + Wc * .34},${bot + bk + 4} Q${cx + Wc * .38},${bot + bk + 4} ${cx + Wc * .38},${bot + bk} L${cx + Wc * .38},${bot - 2} Z" fill="${mt}" stroke="${PAL[mat].x}" stroke-width="1.2"/>
+   <rect x="${cx - Wc / 2}" y="${top}" width="${Wc}" height="${T}" rx="14" fill="${mt}" stroke="${PAL[mat].x}" stroke-width="1.6"/>
+   <rect x="${cx - Wc / 2}" y="${top}" width="${Wc}" height="${T}" rx="14" fill="#fff" filter="url(#brush)" opacity=".3"/>
+   <path d="M${cx - Wc / 2 + 8},${top + 3} L${cx + Wc / 2 - 8},${top + 3}" stroke="${PAL[mat].l}" stroke-width="3" opacity=".9"/>
+   <path d="M${cx - Wc * .485},${top + 1} L${cx - Wc * .485},${top - 6} Q${cx},${top - 6 - dome * 2.2} ${cx + Wc * .485},${top - 6} L${cx + Wc * .485},${top + 1} Z" fill="url(#mb-${mat})" stroke="${PAL[mat].x}" stroke-width="1.2"/>
+   <path d="M${cx - Wc * .44},${top - 6} Q${cx},${top - 6 - dome * 2.3} ${cx + Wc * .44},${top - 6}" fill="none" stroke="#cfeaf6" stroke-opacity=".75" stroke-width="3"/>
+   <g transform="translate(${cx} ${cy})"><rect x="-17" y="-14" width="34" height="28" rx="6" fill="${mt2}" stroke="${PAL[mat].x}" stroke-width="1.2"/><circle r="${cr}" fill="url(#m-${mat})" stroke="${PAL[mat].x}" stroke-width="1.2"/>${[...Array(18)].map((_, i) => rot(i * 20, `<line y1="${-cr}" y2="${-cr + 4}" stroke="${PAL[mat].x}" stroke-width="2"/>`)).join('')}<circle r="${cr * .48}" fill="url(#mb-${mat})"/></g>`;
+  return svg(D + backdrop() + `<g transform="translate(400 500) scale(1.1) translate(-400 -500) translate(0 -10)" filter="url(#shadow)">${g}</g>`);
+}
+function wristView() {
+  const aw = R * 2 * 1.52, cx = 500, cy = 500, sc = 1.08;
+  const top = (x) => cy - aw / 2 - 40 + (x + 60) * .06, bot = (x) => cy + aw / 2 + 40 - (x + 60) * .055;
+  const arm = `M-60,${top(-60)} C 260,${top(260)} 560,${top(560)} 880,${top(880)} L880,${bot(880)} C 560,${bot(560)} 260,${bot(260)} -60,${bot(-60)} Z`;
+  const inner = `<defs><clipPath id="armc"><path d="${arm}"/></clipPath>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4129"/><stop offset=".12" stop-color="#d8aa84"/><stop offset=".38" stop-color="#cf9c74"/><stop offset=".75" stop-color="#a06c48"/><stop offset="1" stop-color="#3d2517"/></linearGradient>
+    <linearGradient id="slv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f141c"/><stop offset=".3" stop-color="#242d3b"/><stop offset="1" stop-color="#0a0d12"/></linearGradient></defs>
+    <path d="${arm}" fill="url(#skin)"/><g clip-path="url(#armc)"><rect x="-60" y="0" width="940" height="1000" filter="url(#grain)" opacity=".18"/>
+    <path d="M380,0 L380,1000 L880,1000 L880,0Z" fill="url(#skinx2)" opacity="0"/></g>
+    <path d="M-80,${top(-80) - 30} L250,${top(250) - 34} Q 300,${cy} 250,${bot(250) + 34} L-80,${bot(-80) + 30} Z" fill="url(#slv)"/>
+    <path d="M250,${top(250) - 34} Q 300,${cy} 250,${bot(250) + 34} L224,${bot(224) + 36} Q 272,${cy} 224,${top(224) - 36} Z" fill="#ece9e1"/>
+    <path d="M250,${top(250) - 34} Q 300,${cy} 250,${bot(250) + 34} L236,${bot(236) + 36} Q 284,${cy} 236,${top(236) - 36} Z" fill="#000" opacity=".16"/>
+    <g clip-path="url(#armc)"><path d="M262,${top(262)} Q 330,${cy} 262,${bot(262)} L330,${bot(330)} Q 400,${cy} 330,${top(330)} Z" fill="#000" opacity=".28"/></g>`;
+  const wx = cx + 20, wy = cy - 6;
+  const watchG = `<g transform="translate(${wx} ${wy}) scale(${sc})"><g clip-path="url(#armc2)">${strap(-1, aw / 2 + 28, { id: 'w' })}${strap(1, aw / 2 + 28, { id: 'w' })}</g>${caseFront()}</g>`;
+  const clip2 = `<clipPath id="armc2" clipPathUnits="userSpaceOnUse"><rect x="-200" y="${-(aw / 2 + 30) / sc}" width="400" height="${(aw + 60) / sc}"/></clipPath>`;
+  return svg(D + backdrop() + `<g transform="rotate(-7 400 500)">${inner}<g filter="url(#shadow)">${clip2}${watchG}</g></g><defs><radialGradient id="vig2" cx="50%" cy="48%" r="75%"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></radialGradient></defs><rect width="800" height="1000" fill="url(#vig2)"/>`);
+}
+function threeQuarter() {
+  const T = m.thickness * S * 1.1;
+  const mk = (z, t) => {
+    const c = mix(PAL[mat].x, PAL[mat].l, t), cl = mix(PAL[mat].x, PAL[mat].d, t * .9);
+    const lugr = [-1, 1].map((sy) => [-1, 1].map((sx) => `<rect x="${400 + (sx > 0 ? LW / 2 + 2 : -LW / 2 - 20)}" y="${sy > 0 ? 470 + R * .6 : 470 - LL - 2}" width="18" height="${LL + 2 - R * .6}" rx="7" fill="${cl}"/>`).join('')).join('');
+    const cr = (z < -T * .28 && z > -T * .72) ? `<rect x="${400 + R - 4}" y="${470 - 19}" width="36" height="38" rx="6" fill="${mix(PAL[mat].d, PAL[mat].l, t * .9)}"/>` : '';
+    return `<div class="layer" style="transform:translateZ(${z}px)">${svg(D + `<circle cx="400" cy="470" r="${R}" fill="${c}"/>` + lugr + cr)}</div>`;
+  };
+  let layers = `<div class="layer" style="transform:translateZ(${-T * .5}px)">${svg(D + `<g transform="translate(400 470)">${strap(-1, 900, { id: 'q' })}${strap(1, 900, { id: 'q' })}</g>`)}</div>`;
+  for (let z = -T; z < -1; z += 2.2) layers += mk(z, .28 + .62 * ((z + T) / T));
+  layers += `<div class="layer" style="transform:translateZ(0px)">${svg(D + `<g transform="translate(400 470)">${caseFront({ noLugs: true, noCrown: true })}</g>`)}</div>`;
+  return `${svg(D + backdrop())}<div class="tdwrap" style="filter:drop-shadow(0 46px 34px rgba(0,0,0,.65))"><div class="persp"><div class="rig" style="transform:translate(20px,10px) rotateX(54deg) rotateZ(-32deg) scale(1.22)">${layers}</div></div></div>`;
+}
+
+const V = { hero, threeQuarter, side: sideView, caseback: casebackView, dial: dialView, wrist: wristView };
+stage.innerHTML = V[view]();
+document.documentElement.dataset.ready = '1';
+</script>

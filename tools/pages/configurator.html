@@ -1,0 +1,28 @@
+<!-- CONFIGURATOR · pick a base model, strap, finish, engraving; price updates live -->
+<section class="phero">
+  <div class="media-fill grade" aria-hidden="true" data-render="scene:configurator" data-parallax>{{scene:configurator}}</div>
+  <div class="wrap phero__body">
+    <h1 data-split>Configurator</h1>
+    <p class="lead" data-reveal>Choose a watch, a strap and a finish. The price updates as you go.</p>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="cfg-h">
+  <div class="wrap split" style="align-items:start">
+    <div class="c-6" style="position:sticky;top:calc(var(--header-h) + 24px)">
+      <div class="wimg" id="cfg-photo" data-cursor data-cursor-label="Photo"></div>
+      <p class="tag" id="cfg-caption" style="margin-top:12px"></p>
+    </div>
+    <div class="c-6 stack">
+      <h2 id="cfg-h" data-split>Make it yours</h2>
+      <fieldset class="cfg-group" style="border:0;padding:0;margin:0"><legend class="tag">Watch</legend><div class="row" id="o-model" role="group" aria-label="Watch"></div></fieldset>
+      <fieldset class="cfg-group" style="border:0;padding:0;margin:0"><legend class="tag">Strap</legend><div class="row" id="o-strap" role="group" aria-label="Strap"></div></fieldset>
+      <fieldset class="cfg-group" style="border:0;padding:0;margin:0"><legend class="tag">Finish</legend><div class="row" id="o-finish" role="group" aria-label="Finish"></div></fieldset>
+      <fieldset class="cfg-group" style="border:0;padding:0;margin:0"><legend class="tag">Engraving</legend><div class="row" id="o-engraving" role="group" aria-label="Engraving"></div></fieldset>
+      <div class="panel" aria-live="polite"><p id="cfg-summary" class="muted"></p><p class="readout" id="cfg-price" style="margin-top:8px"></p></div>
+      <div class="row"><button class="btn" type="button" id="cfg-reset">Reset</button></div>
+      <form data-demo-form novalidate style="margin-top:24px"><div class="field"><label for="cfg-email">Email for your configuration</label><input id="cfg-email" type="email" autocomplete="email" required data-label="Email"></div>
+        <p style="margin-top:16px"><button class="btn btn--solid" type="submit">Send enquiry</button></p><p class="status" role="status" aria-live="polite"></p></form>
+    </div>
+  </div>
+</section>
